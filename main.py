@@ -2,7 +2,7 @@
 
 import discord, random
 from discord.ext import commands
-from bardChat import *
+from gemmyChat import *
 
 DEBUGMODEENABLED = True
 def printd(*args):
