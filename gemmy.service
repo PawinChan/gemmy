@@ -1,0 +1,23 @@
+[Unit]
+Description=Starts the Gemmy bot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=PawinOnAzure
+ExecStart=/home/PawinOnAzure/gemmy/start.py
+WorkingDirectory=/home/PawinOnAzure/gemmy
+Restart=always
+
+RestartSec=30 
+RestartSteps=4
+RestartMaxDelaySec=16m
+
+RuntimeMaxSec=4h
+RestartMode=direct
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+
