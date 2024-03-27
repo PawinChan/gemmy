@@ -1,9 +1,23 @@
 import os
+from jsonOperations import *
 from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai.types.generation_types import BlockedPromptException, StopCandidateException
 
 load_dotenv()
+
+
+
+# Some Configuration
+GEMINI_CONFIG_FILENAME = 'data/geminiChannelConfig.json'
+DEFAULT_CHAT_CONFIG = {'chatEnabled': False, 'streamingEnabled': False, 'modelName': 'gemini-pro'}
+
+motivationEnabledChannels = readJson('data/motivationEnabledChannels.json', [968384363538550808, 1221714436973269052])
+chatConfig = readJson(GEMINI_CONFIG_FILENAME, {'1222075484863467531': DEFAULT_CHAT_CONFIG})
+print(chatConfig)
+
+
+# Model Setup:
 
 # Refer to: https://ai.google.dev/api/python/google/generativeai/GenerationConfig
 geminiConfig = genai.GenerationConfig(
@@ -47,34 +61,18 @@ def newChat(channelId: int, preprompt=None):
   #chatRooms[channelId].send_message(preprompt)
 
 
-async def chatWithBard(channelId: int, message: str, username: str):
+def chatWithBard(channelId: int, message: str, username: str, streamingEnabled=False):
   global chatRooms
 
   if not chatRooms.get(channelId):
     newChat(channelId)
 
   try:
-    response = chatRooms[channelId].send_message(f"{username}: {message}").text
-  except ValueError:
-    response = "\*No response...\*"
-  except BlockedPromptException:
-    response = "This prompt was blocked by Google's Security Settings ☝️. What were you doing???"
-  except StopCandidateException as e:
-    response = f"Cannot Generate Response.\n `{type(e).__name__}`: *{str(e)}*"
-  except Exception as e:
-    response = f"Unhandled Error.\n `{type(e).__name__}`: *{str(e)}*"
-  return response[:2000]
-
-
-def streamBardReponse(channelId: int, message: str, username: str):
-  global chatRooms
-
-  if not chatRooms.get(channelId):
-    newChat(channelId)
-
-  try:
-    for response_chunk in chatRooms[channelId].send_message(f"{username}: {message}", stream=True):
-      yield response_chunk.text
+    if streamingEnabled:
+      for response_chunk in chatRooms[channelId].send_message(f"{username}: {message}", stream=True):
+        yield response_chunk.text
+    else: 
+      yield chatRooms[channelId].send_message(f"{username}: {message}").text[:2000]
     
   except ValueError:
     return "\*No response...\*"
@@ -85,3 +83,13 @@ def streamBardReponse(channelId: int, message: str, username: str):
   except Exception as e:
     return f"Unhandled Error.\n `{type(e).__name__}`: *{str(e)}*"
   #return response[:2000]
+
+
+def editChatConfig(channelId: int, newData: dict):
+  global chatConfig
+  try:
+    chatConfig[channelId].update(newData)
+  except KeyError:
+    chatConfig[channelId] = DEFAULT_CHAT_CONFIG
+    chatConfig[channelId].update(newData)
+  writeJson(GEMINI_CONFIG_FILENAME, chatConfig)

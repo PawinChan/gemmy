@@ -3,8 +3,7 @@
 import discord, random
 from discord.ext import commands
 from gemmyChat import *
-from jsonOperations import *
-
+from typing import Literal
 ####################
 #     Bot Setup    #
 ####################
@@ -13,9 +12,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 client = commands.Bot('.', intents=intents) #Basically discord.Client() with extra stuff.
-
-motivationEnabledChannels = readJson('data/motivationEnabledChannels.json', [968384363538550808, 1221714436973269052])
-geminiEnabledChannels = readJson('data/geminiEnabledChannels.json', [1222075484863467531])
 
 ####################
 #      Events      #
@@ -39,12 +35,14 @@ async def on_message(message):
   if message.channel.id in motivationEnabledChannels:
     emote = random.choice('😁,😌,🥲,💖,🥹,👍,😀,😃,😄,😆,🥰,😍,😙,😚,🫂,🤗,😇,😄'.split(','))
     await message.channel.send(f'สู้ๆ นะ! {emote}')
-  elif message.channel.id in geminiEnabledChannels:
+
+  elif message.channel.id in chatConfig:
     async with message.channel.typing():
+      global chatRooms
       respondingMessage = None
       respondingContent = ""
       # await message.channel.send(await chatWithBard(message.channel.id, message.content, message.author.display_name))
-      for response_chunk in streamBardReponse(message.channel.id, message.content, message.author.display_name):
+      for response_chunk in chatWithBard(message.channel.id, message.content, message.author.display_name, streamingEnabled=chatConfig[message.channel.id]['streamingEnabled']):
         respondingContent += response_chunk
         if respondingMessage is None:
           respondingMessage = await message.channel.send(respondingContent)
@@ -65,28 +63,14 @@ async def on_message(message):
 async def enableChatbotCommand(interaction:discord.Interaction):
   await interaction.response.send_message(f"Pong! That was {round(client.latency * 1000)}ms!")
 
-@client.tree.command(name="chat_enable",description="Enable Chatbot within the channel.")
+@client.tree.command(name="chat_toggle",description="Enable/Disable the chatbot in the current channel.")
 async def enableChatbotCommand(interaction:discord.Interaction):
-  global geminiEnabledChannels
-  if interaction.channel_id not in geminiEnabledChannels:
-    geminiEnabledChannels.append(interaction.channel_id)
-    writeJson('data/geminiEnabledChannels.json', geminiEnabledChannels)
-    newChat(interaction.channel_id)
-    await interaction.response.send_message("✅ Chatbot successfully enabled in this channel.")
-  else:
-    await interaction.response.send_message("ℹ️ Chabot is already enabled in this channel.")
+  global chatConfig
 
-
-@client.tree.command(name="chat_disable",description="Disables the chatbot in the channel.")
-async def disableChatbotCommand(interaction:discord.Interaction):
-  global geminiEnabledChannels
-  if interaction.channel_id in geminiEnabledChannels:
-    geminiEnabledChannels.remove(interaction.channel_id)
-    writeJson('data/geminiEnabledChannels.json', geminiEnabledChannels)
-    await interaction.response.send_message("✅ Chatbot successfully disabled in this channel.")
-  else:
-    await interaction.response.send_message("ℹ️ Chatbot is not enabled in this channel.")
-
+  chatbotCurrentlyEnabled = chatConfig.get(interaction.channel_id, DEFAULT_CHAT_CONFIG).get('chatEnabled')
+  editChatConfig(interaction.channel_id, {'chatEnabled': not chatbotCurrentlyEnabled})
+  await interaction.response.send_message(f"{'❌' if chatbotCurrentlyEnabled else '✅'} Chatbot successfully {'disabled' if chatbotCurrentlyEnabled else 'enabled'} in this channel.")
+  
 
 @client.tree.command(name="chat_reset",description="Resets the chat.")
 async def resetChatCommand(interaction:discord.Interaction):
@@ -97,8 +81,22 @@ async def resetChatCommand(interaction:discord.Interaction):
   else:
     await interaction.response.send_message("ℹ️ There seems to be nothing to reset here!")
 
+
+@client.tree.command(name="chat_configure", description="Configure the chatbot in the current channel.")
+async def resetChatCommand(interaction:discord.Interaction, options: Literal['chatEnabled', 'streamingEnabled'], value: bool):
+  editChatConfig(interaction.channel_id, {options: value})
+  await interaction.response.send_message(f"✅ Chatbot config {options} set to {value}.")
+
+
+@client.tree.command(name="chat_viewconfig", description="View the chatbot configuration in the current channel.")
+async def viewChatConfigCommand(interaction:discord.Interaction):
+  global chatConfig
+  currentConfig = chatConfig.get(interaction.channel_id, None)
+  await interaction.response.send_message(f"Current Chatbot Configuration:\n```json\n{currentConfig}```")
 ####################
 ####### RUN ########
 ####################
+  
 client.run(os.environ['DISCORD_TOKEN'])
 
+#modelName
