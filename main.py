@@ -36,7 +36,7 @@ async def on_message(message):
     emote = random.choice('😁,😌,🥲,💖,🥹,👍,😀,😃,😄,😆,🥰,😍,😙,😚,🫂,🤗,😇,😄'.split(','))
     await message.channel.send(f'สู้ๆ นะ! {emote}')
 
-  elif message.channel.id in chatConfig:
+  elif ((message.channel.id in chatConfig) and (chatConfig[message.channel.id]['chatEnabled'])):
     async with message.channel.typing():
       global chatRooms
       respondingMessage = None
@@ -92,7 +92,7 @@ async def resetChatCommand(interaction:discord.Interaction, options: Literal['ch
 async def viewChatConfigCommand(interaction:discord.Interaction):
   global chatConfig
   currentConfig = chatConfig.get(interaction.channel_id, None)
-  await interaction.response.send_message(f"Current Chatbot Configuration:\n```json\n{currentConfig}```")
+  await interaction.response.send_message(f"Current Chatbot Configuration:\n```json\n{json.dumps(currentConfig, indent=2)}```")
 ####################
 ####### RUN ########
 ####################
