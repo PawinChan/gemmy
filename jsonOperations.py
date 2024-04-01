@@ -5,10 +5,13 @@ try:
 except FileExistsError:
   pass
 
-def readJson(filePath: str, defaultReturn = {}):
+def readJson(filePath: str, defaultReturn = {}, intKeys=False):
   try: 
     with open(filePath, 'r') as f:
-      return json.load(f)
+      if intKeys:
+        return {int(k): v for k, v in json.load(f).items()}
+      else:
+        return json.load(f)
   except FileNotFoundError:
     return defaultReturn
 

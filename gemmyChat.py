@@ -10,10 +10,10 @@ load_dotenv()
 
 # Some Configuration
 GEMINI_CONFIG_FILENAME = 'data/geminiChannelConfig.json'
-DEFAULT_CHAT_CONFIG = {'chatEnabled': False, 'streamingEnabled': False, 'modelName': 'gemini-pro'}
+DEFAULT_CHAT_CONFIG = {'chatEnabled': False, 'streamingEnabled': False, 'modelName': 'gemini-pro', 'addUsername': False}
 
 motivationEnabledChannels = readJson('data/motivationEnabledChannels.json', [968384363538550808, 1221714436973269052])
-chatConfig = readJson(GEMINI_CONFIG_FILENAME, {'1222075484863467531': DEFAULT_CHAT_CONFIG})
+chatConfig = readJson(GEMINI_CONFIG_FILENAME, {'1222075484863467531': DEFAULT_CHAT_CONFIG}, intKeys=True)
 print(chatConfig)
 
 
@@ -30,7 +30,7 @@ geminiConfig = genai.GenerationConfig(
 genai.configure(api_key=os.environ["GEMINI_API_KEY"]) # Obtain token from: https://aistudio.google.com/app/apikey
 
 # Guide: https://ai.google.dev/tutorials/python_quickstart
-model = genai.GenerativeModel('gemini-pro')
+# model = genai.GenerativeModel('gemini-pro')
 def printAvailableModels():
   print("Available Models: ")
   for m in genai.list_models():
@@ -57,7 +57,7 @@ def newChat(channelId: int, preprompt=None):
   #if not preprompt:
     #preprompt = "Hi! You're currently in a discord channel among a group of friends. Try to be helpful, fun, and don't forget to keep your response concise easy to understand! By the way, the author of each message will be noted at the start of the prompt so you can know who is talking to you, although please do NOT prepend your name (or anything like Assistant: , etc.) Here we go!"
   global chatRooms
-  chatRooms[channelId] = model.start_chat(history=[])
+  chatRooms[channelId] = genai.GenerativeModel(chatConfig[channelId].get('modelName', 'gemini-pro')).start_chat(history=[])
   #chatRooms[channelId].send_message(preprompt)
 
 
@@ -68,11 +68,12 @@ def chatWithBard(channelId: int, message: str, username: str, streamingEnabled=F
     newChat(channelId)
 
   try:
+    geminiPrompt = f"{username}: {message}" if chatConfig[channelId].get('addUsername') else message
     if streamingEnabled:
-      for response_chunk in chatRooms[channelId].send_message(f"{username}: {message}", stream=True):
+      for response_chunk in chatRooms[channelId].send_message(geminiPrompt, stream=True):
         yield response_chunk.text
     else: 
-      yield chatRooms[channelId].send_message(f"{username}: {message}").text[:2000]
+      yield chatRooms[channelId].send_message(geminiPrompt).text[:2000]
     
   except ValueError:
     return "\*No response...\*"

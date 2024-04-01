@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import discord, random
+import discord, random, requests, io
+from PIL import Image
 from discord.ext import commands
 from gemmyChat import *
 from typing import Literal
@@ -51,6 +52,16 @@ async def on_message(message):
           respondingContent = response_chunk
         else:
           await respondingMessage.edit(content=respondingContent)
+          
+  elif (message.channel.id in [1223237614467809401]) and message.attachments:
+    async with message.channel.typing():
+      try:
+        image = Image.open(requests.get(message.attachments[0].url, stream=True).raw)
+        response = genai.GenerativeModel('gemini-pro-vision').generate_content([message.content, image]).text
+      except Exception as e:
+        response = f"Unhandled Error.\n `{type(e).__name__}`: *{str(e)}*"
+      #print(response[:1999])
+      await message.channel.send(response[:1999])
   else:
     pass
 
@@ -83,7 +94,7 @@ async def resetChatCommand(interaction:discord.Interaction):
 
 
 @client.tree.command(name="chat_configure", description="Configure the chatbot in the current channel.")
-async def resetChatCommand(interaction:discord.Interaction, options: Literal['chatEnabled', 'streamingEnabled'], value: bool):
+async def resetChatCommand(interaction:discord.Interaction, options: Literal['chatEnabled', 'streamingEnabled', 'addUsername'], value: bool):
   editChatConfig(interaction.channel_id, {options: value})
   await interaction.response.send_message(f"✅ Chatbot config {options} set to {value}.")
 
