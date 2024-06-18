@@ -1,4 +1,4 @@
 discord.py
-random
-dotenv
+#random
+python-dotenv
 google.generativeai

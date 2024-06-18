@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=PawinOnAzure
-ExecStart=/home/PawinOnAzure/gemmy/start.py
-WorkingDirectory=/home/PawinOnAzure/gemmy
+User=pawin
+ExecStart=/home/pawin/gemmy/start.py
+WorkingDirectory=/home/pawin/gemmy
 Restart=always
 
 RestartSec=30 
